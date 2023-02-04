@@ -57,6 +57,27 @@ class MenardsScraper():
         store_button.click()
         common.short_sleep()
 
+    def save_scrape(self, store, product):
+
+        file_name = "menards_" + store[0]['store_id']
+        file_name = file_name + "_" + store[0]['zip_code']
+        file_name = file_name + "_" + product[0]['item']
+        file_name = file_name + "_" + datetime.datetime.today().strftime('%Y-%m-%d')
+        file_name = file_name + ".html"
+
+        try:
+            with open(utils.html_source_path + file_name, "w") as f:
+                f.write(self.driver.page_source)
+        except Exception as e:
+            print(e)
+            common.log_action({"status": "failed",
+                               "filename": file_name})
+        else:
+            common.log_action({"status": "success",
+                               "filename": file_name,
+                               "title": self.driver.title})
+            f.close()
+
     def run_scrape(self):
 
         for store in self.store_list:
@@ -65,29 +86,21 @@ class MenardsScraper():
             self.set_store(store[0]['store_id'])
             common.long_sleep()
 
+            maxtry = 3
             for product in self.product_list:
-                self.driver.get(product[0]['url'])
-                common.short_sleep()
-                print(self.driver.title)
-
-                file_name = "menards_" + store[0]['store_id']
-                file_name = file_name + "_" + store[0]['zip_code']
-                file_name = file_name + "_" + product[0]['item']
-                file_name = file_name + "_" + datetime.datetime.today().strftime('%Y-%m-%d')
-                file_name = file_name + ".html"
-                print(file_name)
-
-                try:
-                    with open(utils.html_source_path + file_name, "w") as f:
-                        f.write(self.driver.page_source)
-                except Exception as e:
-                    common.log_action({"status": "failed",
-                                       "filename": file_name,
-                                       "title": self.driver.title})
-                else:
-                    common.log_action({"status": "success",
-                                       "filename": file_name,
-                                       "title": self.driver.title})
+                ntry = 0
+                while ntry < maxtry:
+                    try:
+                        self.driver.get(product[0]['url'])
+                    except Exception as e:
+                        print("Failed - Try again")
+                        print(e)
+                        ntry = ntry + 1
+                        common.short_sleep()
+                    else:
+                        common.short_sleep()
+                        self.save_scrape(store, product)
+                        ntry = maxtry
 
         self.driver.close()
 

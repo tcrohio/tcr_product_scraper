@@ -6,6 +6,3 @@ if __name__ == '__main__':
 
     menards_obj = menards.MenardsScraper()
     menards_obj.run_scrape()
-
-    hd_obj = hd.HomeDepotScraper()
-    hd_obj.run_scrape()

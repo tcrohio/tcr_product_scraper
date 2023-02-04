@@ -1,5 +1,5 @@
 
-driver_location = '/Users/manhattan/Downloads/chromedriver'
+driver_location = '/Users/manhattan/chromedriver/chromedriver'
 
 # menards
 menards_stores = '/Users/manhattan/PycharmProjects/tcr_product_scraper/configs/menards_stores.csv'

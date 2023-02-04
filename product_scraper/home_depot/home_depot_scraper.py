@@ -18,7 +18,7 @@ class HomeDepotScraper():
     def init_driver(self):
 
         chrome_options = Options()
-        #chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=utils.driver_location)
         stealth(self.driver,
                 languages=["en-US", "en"],
@@ -51,41 +51,69 @@ class HomeDepotScraper():
 
     def set_store(self, store_id):
 
-        self.driver.get(store_id)
+        try:
+            self.driver.get(store_id)
+        except Exception as e:
+            print("Error setting store")
+            print(e)
+            return False
+
         common.short_sleep()
+
         if self.driver.find_element(By.XPATH, "//span[text()='Shop This Store']"):
-            self.driver.find_element(By.XPATH, "//span[text()='Shop This Store']").click()
-        common.short_sleep()
+            try:
+                self.driver.find_element(By.XPATH, "//span[text()='Shop This Store']").click()
+            except Exception as e:
+                print("Error selecting store")
+                print(e)
+                return False
+            else:
+                return True
+                common.short_sleep()
+
+    def save_scrape(self, store, product):
+
+        file_name = "homedepot_" + store[0]['store_id'].rsplit("/", 1)[1]
+        file_name = file_name + "_" + store[0]['zip_code']
+        file_name = file_name + "_" + product[0]['item']
+        file_name = file_name + "_" + datetime.datetime.today().strftime('%Y-%m-%d')
+        file_name = file_name + ".html"
+
+        try:
+            with open(utils.html_source_path + file_name, "w") as f:
+                f.write(self.driver.page_source)
+        except Exception as e:
+            print(e)
+            common.log_action({"status": "failed",
+                               "filename": file_name})
+        else:
+            common.log_action({"status": "success",
+                               "filename": file_name,
+                               "title": self.driver.title})
+            f.close()
 
     def run_scrape(self):
 
         for store in self.store_list:
-
             common.short_sleep()
-            self.set_store(store[0]['store_id'])
-            common.long_sleep()
-
-            for product in self.product_list:
-                self.driver.get(product[0]['url'])
+            if self.set_store(store[0]['store_id']):
                 common.long_sleep()
 
-                file_name = "homedepot_" + store[0]['store_id'].rsplit("/",1)[1]
-                file_name = file_name + "_" + store[0]['zip_code']
-                file_name = file_name + "_" + product[0]['item']
-                file_name = file_name + "_" + datetime.datetime.today().strftime('%Y-%m-%d')
-                file_name = file_name + ".html"
-
-                try:
-                    with open(utils.html_source_path + file_name, "w") as f:
-                        f.write(self.driver.page_source)
-                except Exception as e:
-                    common.log_action({"status": "failed", 
-                                       "filename": file_name,
-                                       "title": self.driver.title})
-                else:
-                    common.log_action({"status": "success",
-                                       "filename": file_name,
-                                       "title": self.driver.title})
+                maxtry = 3
+                for product in self.product_list:
+                    ntry = 0
+                    while ntry < maxtry:
+                        try:
+                            self.driver.get(product[0]['url'])
+                        except Exception as e:
+                            print("Failed - Try again")
+                            print(e)
+                            ntry = ntry + 1
+                            common.short_sleep()
+                        else:
+                            common.short_sleep()
+                            self.save_scrape(store, product)
+                            ntry = maxtry
 
         self.driver.close()
 
